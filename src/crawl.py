@@ -106,6 +106,7 @@ class crawl(threading.Thread):
         self.re_level = re.compile(r'"friendPlayerLevelNum">(\d*)') # 1
             #positions
         self.se_comments = "profile_comment_area"
+        self.se_leftcol = "profile_leftcol"
         self.se_rightcol = "profile_rightcol"
         self.se_topfriends = "profile_topfriends"
             #game
@@ -137,7 +138,7 @@ class crawl(threading.Thread):
 
     #function for finding the amount of certain item
     def find_value(self, index, html, name):
-        match = re.search(r'steamcommunity\.com/' + self.current_user + r'/' + self.item_search[index] + r'"([\D]*)([\d,]*)', html, re.I)
+        match = re.search(r'steamcommunity\.com/' + self.current_user + r'/' + self.item_search[index] + r'"([\D]*)([\d,]+)', html, re.I)
         if not match or "steamcommunity.com/" in match.group(1): return 0
         else: return match.group(2).replace(',', '')
 
@@ -173,24 +174,35 @@ class crawl(threading.Thread):
         html2_size = 0
         if not private_profile:
             #parts of the page
-                #rightcol
+                #left and right cols
+            leftcol_index = html1.find(self.se_leftcol)
             rightcol_index = html1.find(self.se_rightcol)
+                #right col
+            html1_right = ""
             if rightcol_index == -1:
-                html1_right = ""
                 print "Couldn't find right collumn for " + name
-            else: html1_right = html1[rightcol_index:]
+            elif leftcol_index < rightcol_index:
+                html1_right = html1[rightcol_index:]
+            else: html1_right = html1[rightcol_index:leftcol_index]
+                #left col
+            html1_left = ""
+            if leftcol_index == -1:
+                print "Couldn't find left collumn for " + name
+            elif rightcol_index < leftcol_index:
+                html1_left = html1[leftcol_index:]
+            else: html1_left = html1[leftcol_index:rightcol_index]
                 #comments
             html1_comments = ""
-            if rightcol_index != -1:
-                comments_index = html1.find(self.se_comments)
-                if comments_index == -1: print "Couldn't find comments for " + name
-                else: html1_comments = html1[comments_index:rightcol_index]
+            comments_index = html1_left.find(self.se_comments)
+            if comments_index == -1:
+                print "Couldn't find comments for " + name
+            else: html1_comments = html1_left[comments_index:]
                 #top friends
-            topfriend_index = html1.find(self.se_topfriends)
+            html1_topfriends = ""
+            topfriend_index = html1_right.find(self.se_topfriends)
             if topfriend_index == -1:
-                html1_topfriends = ""
                 print "Couldn't find top friends for " + name
-            else: html1_topfriends = html1[topfriend_index:]
+            else: html1_topfriends = html1_right[topfriend_index:]
 
             #background
             has_background = html1.find(self.se_background) != -1
