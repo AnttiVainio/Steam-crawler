@@ -206,6 +206,10 @@ def find_item(reg, html, error, name, index = 1):
 def zeropadder(matchobj):
     return matchobj.group(0)[0] + "0" + matchobj.group(0)[1:]
 
+#used in parse_aliases
+def parse_time(timestring, timeformat):
+    return time.mktime(datetime.datetime.strptime(timestring, timeformat).timetuple())
+
 def parse_aliases(data, error):
     #parse json
     try:
@@ -225,13 +229,22 @@ def parse_aliases(data, error):
             timestring = zeropad.sub(zeropadder, ' ' + timestring[:-2] + timestring[-2:].upper())
             #try to parse time string
             new_time = smallest
-            try:
-                new_time = time.mktime(datetime.datetime.strptime(timestring, " %d %b, %Y @ %I:%M%p").timetuple())
+            # accepted example:  18 Feb, 2012 @ 08:20AM
+            try: new_time = parse_time(timestring, " %d %b, %Y @ %I:%M%p")
             except ValueError:
-                try:
-                    new_time = time.mktime(datetime.datetime.strptime(timestring[:7] + year + timestring[7:], " %d %b, %Y @ %I:%M%p").timetuple())
+                #sometimes the month and day are swapped
+                # accepted example:  Feb 18, 2012 @ 08:20AM
+                try: new_time = parse_time(timestring, " %b %d, %Y @ %I:%M%p")
                 except ValueError:
-                    print "Couldn't parse" + timestring + " for " + error
+                    #add current year if the year is missing
+                    timestring2 = timestring[:7] + year + timestring[7:]
+                    # accepted example:  18 Feb @ 08:20AM
+                    try: new_time = parse_time(timestring2, " %d %b, %Y @ %I:%M%p")
+                    except ValueError:
+                        # accepted example:  Feb 18 @ 08:20AM
+                        try: new_time = parse_time(timestring2, " %b %d, %Y @ %I:%M%p")
+                        except ValueError:
+                            print "Couldn't parse" + timestring + " for " + error
             if new_time < smallest: smallest = new_time
     #analyze data
     if smallest < current_time:
