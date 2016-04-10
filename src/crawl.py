@@ -339,6 +339,10 @@ class crawl(threading.Thread):
             end_time = time.clock()
             elapsed_time = end_time - start_time
             sleep_time = REQUEST_TIME - elapsed_time
+            # print time until analysis
+            time_until_analysis = DATA_DUMP_TIME - end_time + dump_time
+            print "Analyzing in %i:%02i \r" % (time_until_analysis // 60, time_until_analysis % 60),
+            # sleep now
             if sleep_time > 0:
                 time.sleep(sleep_time)
                 start_time = end_time + sleep_time
