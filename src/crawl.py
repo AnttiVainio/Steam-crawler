@@ -9,7 +9,7 @@ from request import request_html, get_req_time
 from backup import get_next_backup_time, backup_files
 
 # List of games that can't be crawled
-UNKNOWN_GAMES = "251290", "324820", "342090", "368020", "364690", "291090"
+UNKNOWN_GAMES = "251290", "324820", "342090", "368020", "364690", "291090", "380180"
 
 class crawl(threading.Thread):
 
@@ -150,7 +150,11 @@ class crawl(threading.Thread):
 
         #user name (must be found)
         name = find_item(self.re_name, html1, "user name", self.current_user)
+        if check_existence:
+            if len(self.existlist) >= EXIST_LIST_SIZE: self.existlist = self.existlist[1:]
+            self.existlist+= "0" if name == None else "1"
         if name == None: return 0
+
         #steam id (must be found)
         steamid = find_item(self.re_steamid, html1, "Steam id", self.current_user)
         c_user_id = user_url_to_user(self.current_user) if self.current_user[0] == 'p' else None #profiles/...
@@ -275,10 +279,9 @@ class crawl(threading.Thread):
         if not private_profile:
             bools.append(has_background)
             numbers = [bg_image] + items
-        user_exists = self.database.save_user(self.current_user, steamid, name, bools, numbers)
-        if check_existence:
-            if len(self.existlist) >= EXIST_LIST_SIZE: self.existlist = self.existlist[1:]
-            self.existlist+= "1" if user_exists else "0"
+
+        self.database.save_user(self.current_user, steamid, name, bools, numbers)
+
         return html2_size
 
 
