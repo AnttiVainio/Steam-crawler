@@ -1,14 +1,17 @@
+import threading
 import time
 import urllib2, httplib, socket
 
 from settings import *
 from util import Progress
 
+request_lock = threading.Lock()
 request_time = 0.0
 request_amount = 0.0
 
 def get_req_time():
-    return request_time / max(request_amount, 1.0)
+    with request_lock:
+        return request_time / max(request_amount, 1.0)
 
 def wait_error():
     progress = Progress(20)
@@ -66,23 +69,24 @@ def request_html(error, address, values = None):
         if not values:
             global request_time
             global request_amount
-            request_amount+= 1.0
-            request_time+= time.clock() - starttime
-        return (True, read_len, html)
+            with request_lock:
+                request_amount+= 1.0
+                request_time+= time.clock() - starttime
+        return True, read_len, html
     except urllib2.HTTPError as e:
         read_len+= handle_httperror(error, e, False)
-        return (False, read_len)
+        return False, read_len
     except urllib2.URLError as e:
         handle_urlerror(error, e, False)
-        return [False]
+        return False,
     except httplib.BadStatusLine:
         handle_badstatusline(error, False)
-        return [False]
+        return False,
     except socket.timeout:
         handle_timeout(error, False)
-        return [False]
+        return False,
     except Exception as e:
         print "Exception while requesting html for " + error + ":"
         print " " + str(type(e)) + ": " + str(e)
         wait_error()
-        return [False]
+        return False,

@@ -259,11 +259,11 @@ class Database():
                         if self.item_upload[j]:
                             if self.item_important[j]: missing_something*= u.data[j + 5]
                             items[j][0].add(u.data[j + 5])
-                            if u.data[j + 5] > items[j][1][0]:
+                            if u.data[j + 5] >= items[j][1][0]:
                                 items[j][2] = items[j][1]
                                 items[j][1] = (u.data[j + 5], u.user_id_queue, u.name)
-                            elif u.data[j + 5] > items[j][2][0]: items[j][2] = (u.data[j + 5], u.user_id_queue, u.name)
-                        elif u.data[j + 5] > items[j][1][0]: items[j][1] = [u.data[j + 5]]
+                            elif u.data[j + 5] >= items[j][2][0]: items[j][2] = (u.data[j + 5], u.user_id_queue, u.name)
+                        elif u.data[j + 5] >= items[j][1][0]: items[j][1] = [u.data[j + 5]]
                     if missing_something == 0:
                         without_something+= 1
 
@@ -389,8 +389,8 @@ class Database():
                     word_recrawl2 = word_is_common2
                 else: name_recrawl, clean_recrawl, clean_recrawl2, word_recrawl, word_recrawl2 = False, False, False, False, False
                 if private_hi_level or is_important or has_no_name or name_change or spec_recrawl or name_recrawl or clean_recrawl or clean_recrawl2 or word_recrawl or word_recrawl2 or bg_change:
-                    #crawl importants first
-                    if is_important:
+                    #crawl importants and special first
+                    if is_important or spec_recrawl:
                         recrawl_queue.insert(0, u.get_recrawl_name())
                     else: recrawl_queue.append(u.get_recrawl_name())
                     if private_hi_level: recrawl_hiprivate+= 1
@@ -418,7 +418,7 @@ class Database():
         steamidrange = (steamid_max - steamid_min + 1) / 1000000.0
         print "Steam id range: " + str(round(steamidrange, 1)) + "mil users"
         existcount = sum(int(i) for i in existlist)
-        print "Approx Steam users: " + str(round(steamidrange * existcount / len(existlist), 1)) +\
+        print "Approx Steam users: " + str(round(steamidrange * existcount / max(len(existlist), 1), 1)) +\
               "mil (" + str(existcount) + "/" + str(len(existlist)) + ")"
 
         #users without stuff

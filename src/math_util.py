@@ -49,4 +49,5 @@ class countmean:
     #returns the relative standard deviation
     def get_relative_deviation(self):
         if self.mean == None: get_mean()
+        if self.mean == 0: return 0
         return 100.0 * math.sqrt(float(sum((i - self.mean) ** 2 * self.n[i] for i in self.n)) / float(self.count)) / self.mean

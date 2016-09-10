@@ -2,6 +2,7 @@ import time
 import threading
 import re
 
+from request_threading import Request_handler
 from database import Database
 from settings import *
 from util import *
@@ -9,7 +10,7 @@ from request import request_html, get_req_time
 from backup import get_next_backup_time, backup_files
 
 # List of games that can't be crawled
-UNKNOWN_GAMES = "251290", "324820", "342090", "368020", "364690", "291090", "380180"
+UNKNOWN_GAMES = "251290", "324820", "342090", "368020", "364690", "291090", "380180", "480730"
 
 class crawl(threading.Thread):
 
@@ -40,9 +41,10 @@ class crawl(threading.Thread):
                            "item",
                            "group",
                            "friend",
-                           "alias")
+                           "alias",
+                           )
         self.item_search = (r"badges/",
-                            r"games/",
+                            r"games/\?tab=all",
                             r"screenshots/",
                             r"videos/",
                             r"myworkshopfiles/",
@@ -52,7 +54,8 @@ class crawl(threading.Thread):
                             r"myworkshopfiles/\?section=greenlight",
                             r"inventory/",
                             r"groups/",
-                            r"friends/")
+                            r"friends/",
+                            )
         self.item_important = (True,  #level
                                False, #badge
                                True,  #game
@@ -66,7 +69,8 @@ class crawl(threading.Thread):
                                False, #item
                                True,  #group
                                True,  #friend
-                               False) #alias
+                               False, #alias
+                               )
         self.item_upload = list(self.item_important)
         self.item_upload[-1] = True #alias
         self.item_upload = tuple(self.item_upload)
@@ -115,9 +119,8 @@ class crawl(threading.Thread):
         #performance stats
         self.crawl_times_sum = 0
         self.crawl_times_amount = 0
-        self.crawls_fast = 0
-        self.crawls_slow = 0
-        self.crawls_error = 0 #errors are not counted to mean sleep
+
+        self.request_handler = Request_handler(self.queue)
 
         self.database = Database(self.item_names, self.item_important, self.item_upload)
 
@@ -143,7 +146,7 @@ class crawl(threading.Thread):
         else: return match.group(2).replace(',', '')
 
 
-    def parse(self, html1, check_existence):
+    def parse(self, html1, html2, check_existence):
         if html1.find("<title>Steam Community") == -1:
             print "    ALERT: Got wrong language website!"
             return 0
@@ -175,7 +178,6 @@ class crawl(threading.Thread):
         has_avatar = html1.find(self.se_noavatar) == -1
         has_bans = html1.find(self.se_bans) != -1
 
-        html2_size = 0
         if not private_profile:
             #parts of the page
                 #left and right cols
@@ -235,9 +237,7 @@ class crawl(threading.Thread):
 
             #aliases
             items.append(0)
-            html2 = request_html(self.current_user + "/ajaxaliases", self.current_url + "/ajaxaliases")
-            if html2[0]: items[-1] = parse_aliases(html2[2], name)
-            if len(html2) > 1: html2_size = html2[1]
+            if html2: items[-1] = parse_aliases(html2, name)
 
             #check hiscores
             for i in range(len(items)):
@@ -246,33 +246,34 @@ class crawl(threading.Thread):
                     self.hiscores[i] = items[i]
 
             #get friends
-            get_friends = len(self.queue) < MAX_QUEUE_SIZE
-                #top friends with levels
-            friends = re.findall(self.re_friend_level, html1_topfriends)
-            if friends:
-                for i in friends:
-                    friend = i[0]
-                    if friend != self.current_user:
-                        is_high_leveled = int(i[2]) >= QUICK_CRAWL_LEVEL
-                        if is_high_leveled: self.database.add_high_leveled(friend)
-                        if not self.database.exists(friend):
-                            if is_high_leveled:
-                                try: queue_index = self.queue.index(friend)
-                                except ValueError: queue_index = None
-                                if queue_index == None or queue_index > 10:
-                                    if queue_index: del self.queue[queue_index]
-                                    self.queue.insert(0, friend)
-                                    print "Quick crawling " + friend + " (" + i[2] + ") "
-                            elif get_friends and not friend in self.queue:
-                                self.queue.append(friend)
-                #comments (get these only if there is space in the queue)
-            if get_friends:
-                friends = re.findall(self.re_friends, html1_comments)
+            with self.request_handler.queue_lock:
+                get_friends = len(self.queue) < MAX_QUEUE_SIZE
+                    #top friends with levels
+                friends = re.findall(self.re_friend_level, html1_topfriends)
                 if friends:
                     for i in friends:
                         friend = i[0]
-                        if friend != self.current_user and not friend in self.queue and not self.database.exists(friend):
-                            self.queue.append(friend)
+                        if friend != self.current_user:
+                            is_high_leveled = int(i[2]) >= QUICK_CRAWL_LEVEL
+                            if is_high_leveled: self.database.add_high_leveled(friend)
+                            if not self.database.exists(friend):
+                                if is_high_leveled:
+                                    try: queue_index = self.queue.index(friend)
+                                    except ValueError: queue_index = None
+                                    if queue_index == None or queue_index > 10:
+                                        if queue_index: del self.queue[queue_index]
+                                        self.queue.insert(0, friend)
+                                        print "Quick crawling " + friend + " (" + i[2] + ") "
+                                elif get_friends and not friend in self.queue:
+                                    self.queue.append(friend)
+                    #comments (get these only if there is space in the queue)
+                if get_friends:
+                    friends = re.findall(self.re_friends, html1_comments)
+                    if friends:
+                        for i in friends:
+                            friend = i[0]
+                            if friend != self.current_user and not friend in self.queue and not self.database.exists(friend):
+                                self.queue.append(friend)
 
         bools = [private_profile, has_avatar, has_bans]
         numbers = None
@@ -281,8 +282,6 @@ class crawl(threading.Thread):
             numbers = [bg_image] + items
 
         self.database.save_user(self.current_user, steamid, name, bools, numbers)
-
-        return html2_size
 
 
     def parse_game(self, html1, game):
@@ -303,6 +302,7 @@ class crawl(threading.Thread):
 
     def run(self):
         print "Really, no need for another Steam crawler"
+        self.request_handler.start()
         health_check = True
         start_time = time.clock()
         queue_time = start_time
@@ -310,30 +310,30 @@ class crawl(threading.Thread):
         dump_time2 = start_time
         self.session_starttime = start_time
         self.dump_status(1)
-        while not self.quit:
-            html2_size = 0
+        while not self.quit or not self.request_handler.done():
+            if self.quit: self.request_handler.stop()
 
             if len(self.games_queue):
                 game = self.games_queue.pop()
                 print "Crawling game: " + game
+                html = 1
                 html1 = request_html("game " + game, "http://steamcommunity.com/app/" + game)
                 if html1[0]: self.parse_game(html1[2], game)
+                html2 = False,
             else:
-                self.current_user = self.queue.pop(0)
-                if self.current_user[0] == '-':
-                    self.current_user = self.current_user[1:]
-                    check_existence = True
-                else: check_existence = False
-                self.current_url = "http://steamcommunity.com/" + self.current_user
-
-                    #html request
-                html1 = request_html(self.current_user, self.current_url)
-                if html1[0]: html2_size = self.parse(html1[2], check_existence)
+                html = self.request_handler.get_html()
+                if html != -1:
+                    html1 = html[2]
+                    html2 = html[3]
+                    self.current_user = html[0]
+                    self.current_url = "http://steamcommunity.com/" + self.current_user
+                    if html1[0]: self.parse(html1[2], html2[2] if html2[0] else None, html[1])
 
                 #stats
             current_time = time.time()
-            if len(html1) > 1:
+            if html != -1 and len(html1) > 1:
                 self.save_times.append(current_time)
+                html2_size = html2[1] if len(html2) > 1 else 0
                 self.save_amounts.append(html1[1] + html2_size)
                 self.alltimestats[1]+= 1
                 self.alltimestats[2]+= html1[1] + html2_size
@@ -341,7 +341,7 @@ class crawl(threading.Thread):
                 #sleep
             end_time = time.clock()
             elapsed_time = end_time - start_time
-            sleep_time = REQUEST_TIME - elapsed_time
+            sleep_time = SLEEP_TIME - elapsed_time
             # print time until analysis
             time_until_analysis = DATA_DUMP_TIME - end_time + dump_time
             print "Analyzing in %i:%02i \r" % (time_until_analysis // 60, time_until_analysis % 60),
@@ -352,13 +352,9 @@ class crawl(threading.Thread):
             else: start_time = end_time
 
                 #performance stats
-            if elapsed_time >= ERROR_TIME:
-                self.crawls_error+= 1
-            else:
+            if elapsed_time < ERROR_TIME and html != -1 and len(html1) > 1:
                 self.crawl_times_sum+= elapsed_time
                 self.crawl_times_amount+= 1
-                if sleep_time < 0: self.crawls_slow+= 1
-                else: self.crawls_fast+= 1
 
             if health_check:
                 print "Crawling succesfully"
@@ -366,10 +362,13 @@ class crawl(threading.Thread):
 
                 #data save/dump and backup
             if end_time - dump_time > DATA_DUMP_TIME: #sync
-                self.dump_data()
-                queue_time = time.clock()
-                dump_time = queue_time
-                dump_time2 = queue_time
+                self.request_handler.stop()
+                if self.request_handler.done():
+                    self.dump_data()
+                    queue_time = time.clock()
+                    dump_time = queue_time
+                    dump_time2 = queue_time
+                    self.request_handler.start()
             elif end_time - dump_time2 > STATUS_DUMP_TIME: #status
                 self.dump_status()
                 dump_time2 = end_time
@@ -390,7 +389,8 @@ class crawl(threading.Thread):
         starttime = time.clock()
         self.update_uptime(starttime)
         save_queue(self.alltimestats, "mem/stats")
-        save_queue(self.queue, "mem/queue", queue_to_file)
+        with self.request_handler.queue_lock:
+            save_queue(self.queue, "mem/queue", queue_to_file)
         save_queue(self.hiscores, "mem/high")
         save_queue(self.save_times, "mem/times")
         save_queue(self.save_amounts, "mem/bytes")
@@ -401,17 +401,11 @@ class crawl(threading.Thread):
             #queue size and bg size
         print "  saved (" + str(len(self.bg_images)) + " bg)",
             #http time
-        print "(" + str(round(get_req_time() * 2.0, 2)) + " http)",
-            #crawling speed
-        crawls_sum = self.crawls_fast + self.crawls_slow + self.crawls_error
-        print "(" + str(round(self.crawl_times_sum / max(self.crawl_times_amount, 1), 2)) +\
-              " " + str(round((starttime - self.session_starttime) / crawls_sum, 2)) +\
-              " / " + str(REQUEST_TIME) + ")",
-            #fast / slow / error crawls
-        crawls_sum/= 100.0
-        print "(" + str(int(round(self.crawls_fast / crawls_sum))) + "f",
-        print str(int(round(self.crawls_slow / crawls_sum))) + "s",
-        print str(int(round(self.crawls_error / crawls_sum))) + "e)",
+        print "(" + str(round(get_req_time(), 2)) + " http)",
+            #database speed
+        print "(" + str(round(self.crawl_times_sum / max(self.crawl_times_amount, 1), 2)) + " db)",
+            #total speed
+        print "(" + str(round((starttime - self.session_starttime) / max(self.crawl_times_amount, 1), 2)) + " tot)",
             #speed of this func
         print get_time_string(starttime)
 
@@ -475,4 +469,6 @@ class crawl(threading.Thread):
         if recrawl_len:
             if recrawl_len >= len(self.queue): self.queue = recrawl_queue
             else: self.queue = recrawl_queue + self.queue[recrawl_len:]
+            #also update the new queue for the request handler
+            self.request_handler.queue = self.queue
         print "Length of queue: " + str(len(self.queue)) + "\n"
