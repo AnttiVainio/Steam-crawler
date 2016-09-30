@@ -462,10 +462,10 @@ class Database():
         values+= [total_files,
                   float(levels_per_badges),
                   stringify(l_per_b_user[0]),
-                  stringify(l_per_b_user[1]),
+                  stringify(redact_urls(l_per_b_user[1])),
                   float(badges_per_levels),
                   stringify(b_per_l_user[0]),
-                  stringify(b_per_l_user[1])]
+                  stringify(redact_urls(b_per_l_user[1]))]
         #general
         for i in range(len(general_names)):
             keys.append(general_names[i])
@@ -487,9 +487,9 @@ class Database():
                 keys.append(prefix + str(j))
                 keys.append(prefix + "_a" + str(j))
                 #figure out cleaned name and words
-                if i == 1: values.append(stringify(max(cleaned_names_ws[-j - 1].iteritems(), key = itemgetter(1))[0]))
-                elif i == 2: values.append(stringify(max(words_ws[-j - 1].iteritems(), key = itemgetter(1))[0]))
-                else: values.append(stringify(common_names[i][-j - 1][0]))
+                if i == 1: values.append(stringify(redact_urls(max(cleaned_names_ws[-j - 1].iteritems(), key = itemgetter(1))[0])))
+                elif i == 2: values.append(stringify(redact_urls(max(words_ws[-j - 1].iteritems(), key = itemgetter(1))[0])))
+                else: values.append(stringify(redact_urls(common_names[i][-j - 1][0])))
                 values.append(int(common_names[i][-j - 1][1]))
         #items data
         for i in range(len(self.item_names)):
@@ -515,7 +515,7 @@ class Database():
                         keys.append(prefix + "_n" + str(j))
                         values.append(int(items[i][j + 1][0]))
                         values.append(stringify(items[i][j + 1][1]))
-                        values.append(stringify(items[i][j + 1][2]))
+                        values.append(stringify(redact_urls(items[i][j + 1][2])))
         #important people
         for i in range(IMPORTANT_AMOUNT):
             keys.append("imprtnt" + str(i))
@@ -523,7 +523,7 @@ class Database():
             keys.append("imprtnt_n" + str(i))
             values.append(imprt_correct[-i - 1][1] * 100.0 / self.items_important_amount)
             values.append(stringify(imprt_correct[-i - 1][0][0]))
-            values.append(stringify(imprt_correct[-i - 1][0][1]))
+            values.append(stringify(redact_urls(imprt_correct[-i - 1][0][1])))
         #put data into json
         data = get_json(keys, values)
 

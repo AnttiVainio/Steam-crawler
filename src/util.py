@@ -105,6 +105,14 @@ def file_userid_to_sid(user):
 def file_steamid_to_sid(user):
     return int(file_to_queue(user))
 
+def redact_url(match):
+    print "  redacting " + match.group(1)
+    return r'\u2593' * len(match.group(1)) + match.group(2)
+
+#tries to redact urls from a string quite aggressively
+def redact_urls(s):
+    return re.sub(r'([a-z0-9_-~]+\.[a-z]{2,3})($|[^a-z])', redact_url, s, 0, re.I)
+
 
     # File system
 
