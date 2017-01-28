@@ -3,7 +3,7 @@ VERSION = "1.0"
 FIRST_USER = "id/MrAnaatti"
 SOME_STEAM_ID = 76561198030822246
 STEAM_ID_LEN = 17
-USER_AGENT = "Custom web crawler for Steam users; +http://www.github.com/Anaatti/Steam-crawler"
+USER_AGENT = "Custom web crawler for Steam users; +https://www.github.com/AnttiVainio/Steam-crawler"
 LANG = "en"
 DATA_SAVER = "http://www.yoursteamcrawlywebsite.com/somesavingscript"
 
