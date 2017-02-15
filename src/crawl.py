@@ -10,7 +10,18 @@ from request import request_html, get_req_time
 from backup import get_next_backup_time, backup_files
 
 # List of games that can't be crawled
-UNKNOWN_GAMES = "251290", "324820", "342090", "368020", "364690", "291090", "380180", "480730"
+UNKNOWN_GAMES = {"267420" : "Holiday Sale 2013",
+                 "251290" : "The Legend of Heroes: Trails in the Sky SC",
+                 "324820" : "???",
+                 "342090" : "The Clans - Saga of the Twins",
+                 "368020" : "Monster Summer Sale",
+                 "364690" : "SUPER DISTRO",
+                 "291090" : "I Get This Call Every Day",
+                 "380180" : "Medieval Kingpin",
+                 "480730" : "Summer Sale 2016",
+                 "566020" : "The Steam Awards",
+                 "487980" : "???",
+                 }
 
 class crawl(threading.Thread):
 
@@ -105,8 +116,8 @@ class crawl(threading.Thread):
             #private
         self.se_background = "has_profile_background"
         self.re_bgimage = re.compile(r"background-image: url\(( ')?([^')]*)") # 2
-        self.re_friends      = re.compile(r'steamcommunity\.com/((id|profiles)/[\w-]*)') # 1
-        self.re_friend_level = re.compile(r'steamcommunity\.com/((id|profiles)/[\w-]*)[\D]*([\d]*)') # 1 + 3
+        self.re_friends      = re.compile(r'steamcommunity\.com/((id|profiles)/[\w-]+)') # 1
+        self.re_friend_level = re.compile(r'steamcommunity\.com/((id|profiles)/[\w-]+)[\D]*([\d]*)') # 1 + 3
         self.re_level = re.compile(r'"friendPlayerLevelNum">(\d*)') # 1
             #positions
         self.se_comments = "profile_comment_area"
@@ -254,7 +265,8 @@ class crawl(threading.Thread):
                     for i in friends:
                         friend = i[0]
                         if friend != self.current_user:
-                            is_high_leveled = int(i[2]) >= QUICK_CRAWL_LEVEL
+                            try: is_high_leveled = int(i[2]) >= QUICK_CRAWL_LEVEL
+                            except ValueError: is_high_leveled = False
                             if is_high_leveled: self.database.add_high_leveled(friend)
                             if not self.database.exists(friend):
                                 if is_high_leveled:
@@ -286,8 +298,7 @@ class crawl(threading.Thread):
 
     def parse_game(self, html1, game):
         # Special cases that can't be crawled
-        if game == "267420": self.games[game] = "Holiday Sale 2013"
-        elif game in UNKNOWN_GAMES: self.games[game] = "Unknown"
+        if game in UNKNOWN_GAMES: self.games[game] = UNKNOWN_GAMES[game]
         else:
             name = find_item(self.re_game, html1, "name", "game " + game)
             if name: self.games[game] = name
@@ -296,7 +307,7 @@ class crawl(threading.Thread):
                     int(game)
                     print "Recrawling later"
                 except ValueError:
-                    self.games[game] = "Unknown"
+                    self.games[game] = "???"
                     print "Setting as unknown"
 
 
