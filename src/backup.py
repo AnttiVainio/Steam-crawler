@@ -19,7 +19,8 @@ def get_backup_name(current_time, name):
 def create_backup(current_time, name):
     with open("mem/" + name, "rb") as data_file:
         with bz2.BZ2File(get_backup_name(current_time, name), "wb") as output_file:
-            output_file.write(data_file.read())
+            for i in data_file:
+                output_file.write(i)
             output_file.close()
         data_file.close()
 
