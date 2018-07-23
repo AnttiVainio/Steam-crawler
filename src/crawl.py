@@ -21,6 +21,14 @@ UNKNOWN_GAMES = {"267420" : "Holiday Sale 2013",
                  "480730" : "Summer Sale 2016",
                  "566020" : "The Steam Awards",
                  "487980" : "???",
+                 "441020" : "Heavenstrike Rivals",
+                 "591680" : "???",
+                 "600040" : "???",
+                 "639900" : "Steam Summer 2017",
+                 "762800" : "The Steam Awards - 2017",
+                 "866860" : "Spring Cleaning Event",
+                 "497870" : "???",
+                 "876740" : "Intergalactic Steam Summer Sale",
                  }
 
 class crawl(threading.Thread):
@@ -33,7 +41,7 @@ class crawl(threading.Thread):
             print i + "\n ",
         print "\nInitializing"
 
-        self.quit = True
+        self.quit = False
         self.quit_analyze = True
         self.request_time = 0
 
@@ -312,7 +320,6 @@ class crawl(threading.Thread):
 
 
     def run(self):
-        print "Really, no need for another Steam crawler"
         self.request_handler.start()
         health_check = True
         start_time = time.clock()
@@ -328,7 +335,7 @@ class crawl(threading.Thread):
                 game = self.games_queue.pop()
                 print "Crawling game: " + game
                 html = 1
-                html1 = request_html("game " + game, "http://steamcommunity.com/app/" + game)
+                html1 = request_html("game " + game, "https://steamcommunity.com/app/" + game)
                 if html1[0]: self.parse_game(html1[2], game)
                 html2 = False,
             else:
@@ -337,7 +344,7 @@ class crawl(threading.Thread):
                     html1 = html[2]
                     html2 = html[3]
                     self.current_user = html[0]
-                    self.current_url = "http://steamcommunity.com/" + self.current_user
+                    self.current_url = "https://steamcommunity.com/" + self.current_user
                     if html1[0]: self.parse(html1[2], html2[2] if html2[0] else None, html[1])
 
                 #stats

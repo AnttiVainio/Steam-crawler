@@ -24,7 +24,7 @@ class Request_sender(threading.Thread):
                     current_user = current_user[1:]
                     check_existence = True
                 else: check_existence = False
-                current_url = "http://steamcommunity.com/" + current_user
+                current_url = "https://steamcommunity.com/" + current_user
 
                     #html request
                 html = (current_user,

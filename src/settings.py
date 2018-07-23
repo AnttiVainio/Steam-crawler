@@ -5,13 +5,13 @@ SOME_STEAM_ID = 76561198030822246
 STEAM_ID_LEN = 17
 USER_AGENT = "Custom web crawler for Steam users; +https://www.github.com/AnttiVainio/Steam-crawler"
 LANG = "en"
-DATA_SAVER = "http://www.yoursteamcrawlywebsite.com/somesavingscript"
+DATA_SAVER = "https://www.yoursteamcrawlywebsite.com/somesavingscript"
 
     # Crawler speed
 REQUEST_THREADS = 2
 SLEEP_TIME = 0.2
-ERROR_TIME = 100.0
-TIMEOUT = 120.0
+ERROR_TIME = 20.0
+TIMEOUT = 30.0
 QUEUE_SAVE_TIME = 600
 STATUS_DUMP_TIME = 300
 DATA_DUMP_TIME = 7000

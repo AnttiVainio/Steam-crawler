@@ -37,7 +37,7 @@ if __name__ == '__main__':
               str(int(round(log(sys.maxint * 2 + 2, 2)))) + "bit")
         if sys.version_info.major != 2:
             print("Not supported; use Python 2")
-        elif 0:
+        else:
             print("")
             #start
             crawler = crawl()
@@ -54,5 +54,4 @@ if __name__ == '__main__':
                     crawler.quit_analyze = False
                 crawler.quit = True
                 crawler.join()
-        print("I don't think there is a need to run another Steam crawler")
     raw_input("Finished")

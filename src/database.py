@@ -160,7 +160,7 @@ class Database():
         without_something = 0
 
         if file_exists("mem/data"):
-            shutil.copyfile("mem/data", "mem/data_temp")
+            shutil.move("mem/data", "mem/data_temp")
             user_data_file = open("mem/data_temp", "rb")
         else: user_data_file = StringIO.StringIO("")
         new_data_file = open("mem/data", "wb")
